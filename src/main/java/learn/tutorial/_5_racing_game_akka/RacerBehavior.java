@@ -64,7 +64,7 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
                         // send current position to monitor
                         message.getSender().tell(new MonitorBehavior.PositionCommand(this.getContext().getSelf(), currentPosition));
 
-                        return this;
+                        return Behaviors.same();
 
                     } else {
 
@@ -86,7 +86,7 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
 
                 .onMessage(AskPosition.class, message -> {
                     message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), completedTime));
-                    return this;
+                    return Behaviors.same();
                 })
 
                 .build();
