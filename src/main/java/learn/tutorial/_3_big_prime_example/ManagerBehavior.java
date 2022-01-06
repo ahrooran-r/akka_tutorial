@@ -35,7 +35,6 @@ public class ManagerBehavior extends AbstractBehavior<ManagerBehavior.Command> {
 
                     if (command.getMessage().equals("start")) {
                         for (int i = 0; i < 20; i++) {
-
                             ActorRef<WorkerBehavior.Command> childActor = this.getContext().spawn(WorkerBehavior.create(), "worker_" + i);
 
                             // instead of using strings, I'm using the `Command` custom message object I created for this

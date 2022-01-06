@@ -31,14 +31,26 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
         return Behaviors.setup(RacerBehavior::new);
     }
 
+
     @Override
     public Receive<CommonCommand> createReceive() {
+        return notYetStarted();
+    }
+
+    public Receive<CommonCommand> notYetStarted() {
         return newReceiveBuilder()
 
                 .onMessage(RaceLengthCommand.class, message -> {
                     this.raceLength = message.getRaceLength();
-                    return this;
+
+                    return running();
                 })
+
+                .build();
+    }
+
+    public Receive<CommonCommand> running() {
+        return newReceiveBuilder()
 
                 .onMessage(AskPosition.class, message -> {
 
@@ -52,17 +64,33 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
                         // send current position to monitor
                         message.getSender().tell(new MonitorBehavior.PositionCommand(this.getContext().getSelf(), currentPosition));
 
+                        return this;
+
                     } else {
 
                         // send current time to sender
-                        message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), System.currentTimeMillis()));
-                    }
+                        long completedTime = System.currentTimeMillis();
+                        message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), completedTime));
 
-                    return this;
+                        return completed(completedTime);
+                    }
 
                 })
 
                 .build();
+
+    }
+
+    public Receive<CommonCommand> completed(long completedTime) {
+        return newReceiveBuilder()
+
+                .onMessage(AskPosition.class, message -> {
+                    message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), completedTime));
+                    return this;
+                })
+
+                .build();
+
     }
 
     private double getMaxSpeed() {
