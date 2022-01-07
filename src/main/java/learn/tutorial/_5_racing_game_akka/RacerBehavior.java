@@ -140,7 +140,9 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
                 // This could be used to closing resources
                 .onSignal(PostStop.class, signal -> {
 
-                    System.out.println("Prior to termination -> PostStop signal execution");
+                    // using akka logging
+                    this.getContext().getLog().info("Prior to termination -> PostStop signal execution");
+
                     return Behaviors.same();
 
                 })
