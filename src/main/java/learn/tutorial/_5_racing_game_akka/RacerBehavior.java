@@ -2,6 +2,7 @@ package learn.tutorial._5_racing_game_akka;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
+import akka.actor.typed.PostStop;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
@@ -64,6 +65,8 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
                         // send current position to monitor
                         message.getSender().tell(new MonitorBehavior.PositionCommand(this.getContext().getSelf(), currentPosition));
 
+                        // return this => return Behaviors.same() -> both are same
+                        // -> but latter is more explanatory
                         return Behaviors.same();
 
                     } else {
@@ -72,7 +75,7 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
                         long completedTime = System.currentTimeMillis();
                         message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), completedTime));
 
-                        return completed(completedTime);
+                        return completed_bestApproach();
                     }
 
                 })
@@ -81,16 +84,68 @@ public class RacerBehavior extends AbstractBehavior<CommonCommand> {
 
     }
 
-    public Receive<CommonCommand> completed(long completedTime) {
+    public Receive<CommonCommand> completed_notTheBestApproach(long completedTime) {
         return newReceiveBuilder()
 
                 .onMessage(AskPosition.class, message -> {
                     message.getSender().tell(new MonitorBehavior.ResultCommand(this.getContext().getSelf(), completedTime));
-                    return Behaviors.same();
+
+                    // This is not the best way to do this
+                    // Because child actors stop themselves, the parent actor will not know about any of this
+                    // So there will be `dead letters` from parent to child even after child stops.
+                    // A better approach is to stop children from parent actors
+                    return Behaviors.stopped();
+
+                    // or we could ignore the receiving messages
+                    // this actor will continue to receive messages -> but ignores them
+                    // therefore no dead letter warnings will be there
+                    // but this is a waste of resources
+
+                    // return Behaviors.ignore();
                 })
 
                 .build();
 
+    }
+
+    /**
+     * Instead of stopping child actor, it is going to send a completed message.
+     * <p>
+     * The parent actor will receive this and stops the child actor
+     */
+    public Receive<CommonCommand> completed_bestApproach() {
+        return newReceiveBuilder()
+
+                .onMessage(Command.class, message -> {
+
+                    message.getSender().tell(new MonitorBehavior.CompletedCommand(this.getContext().getSelf()));
+
+                    // When the parent initiates a stop command, it sends a signal to children to stop
+                    // We can capture that signal ourselves and do any post-processing (clearing of resources etc.)
+                    // Then close the child actor
+                    return waitingToStop();
+
+                })
+
+                .build();
+
+    }
+
+    public Receive<CommonCommand> waitingToStop() {
+        return newReceiveBuilder()
+
+                .onAnyMessage(message -> Behaviors.same())
+
+                // This signal is sent to child actors prior to stopping
+                // This could be used to closing resources
+                .onSignal(PostStop.class, signal -> {
+
+                    System.out.println("Prior to termination -> PostStop signal execution");
+                    return Behaviors.same();
+
+                })
+
+                .build();
     }
 
     private double getMaxSpeed() {

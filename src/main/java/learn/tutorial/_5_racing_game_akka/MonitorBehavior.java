@@ -136,6 +136,31 @@ public class MonitorBehavior extends AbstractBehavior<CommonCommand> {
                     return this;
                 })
 
+                .onMessage(CompletedCommand.class, message -> {
+
+                    // stop the children
+                    this.getContext().stop(message.getSender());
+
+                    // In-fact, stopping parent actor will force all child actors to stop as well
+                    // We don't need to explicitly stop child actors
+                    // But doing so will conserve resources on child actors
+
+                    // If all children are completed
+                    if (results.keySet().size() >= 10) {
+
+                        return Behaviors.withTimers(timers -> {
+
+                            // cancel the timers
+                            timers.cancelAll();
+
+                            // stop the monitor itself (self stop)
+                            return Behaviors.stopped();
+                        });
+                    }
+
+                    return Behaviors.same();
+                })
+
                 .build();
     }
 
@@ -169,6 +194,13 @@ public class MonitorBehavior extends AbstractBehavior<CommonCommand> {
     @AllArgsConstructor
     public static class Command implements CommonCommand {
         private ActorRef<CommonCommand> sender;
+    }
+
+    public static class CompletedCommand extends Command {
+
+        public CompletedCommand(ActorRef<CommonCommand> sender) {
+            super(sender);
+        }
     }
 
     private static class GetPosition implements CommonCommand {
