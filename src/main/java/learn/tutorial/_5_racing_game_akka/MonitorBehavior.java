@@ -153,7 +153,14 @@ public class MonitorBehavior extends AbstractBehavior<CommonCommand> {
                             // cancel the timers
                             timers.cancelAll();
 
-                            // stop the monitor itself (self stop)
+                            /*
+                            stop the monitor itself (self stop)
+                            This is not always a good ides
+                            When an actor stops, it sends a TerminatedSignal to its parent
+                            When we don't watch these actors [see learn.tutorial._9_akka_blockchain_example.ControllerBehavior#startNextWorker()],
+                            parent actor simply ignores the signal and carries on
+                            But when parent watches the child actors, this will THROW `DeathPact` exception !!!
+                            * */
                             return Behaviors.stopped();
                         });
                     }
