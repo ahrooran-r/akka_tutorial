@@ -1,3 +1,5 @@
+For quick summary: https://doc.akka.io/docs/akka/current/typed/from-classic.html
+
 Actor
     -> Name, Path       => can locate actor with these parameters
     -> Message          => any class that is serializable
