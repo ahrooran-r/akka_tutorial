@@ -2,10 +2,7 @@ package learn.tutorial._3_big_prime_example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -22,12 +19,37 @@ public class ManagerBehavior extends AbstractBehavior<ManagerBehavior.Command> {
 
     private SortedSet<BigInteger> sortedSet = new TreeSet<>();
 
-    private ManagerBehavior(ActorContext<Command> context) {
+    // Stashing messages for later use
+    private StashBuffer<ManagerBehavior.Command> stashBuffer;
+
+    private ManagerBehavior(ActorContext<Command> context, StashBuffer<ManagerBehavior.Command> stashBuffer) {
         super(context);
+        this.stashBuffer = stashBuffer;
     }
 
     public static Behavior<Command> create() {
-        return Behaviors.setup(ManagerBehavior::new);
+        // This is a little different from normal create() method
+        // We are returning the normal Behaviors.setup() within the withinStash() method
+        return Behaviors.withStash(
+                10,
+                stash -> {
+                    return Behaviors.setup(context -> {
+                        return new ManagerBehavior(context, stash);
+                    });
+                }
+        );
+        /*
+        now we can do
+                stashBuffer.stash(message);
+        and
+            stashBuffer.unstashAll(someMessageHandler);
+
+        This will stash messages when too much processing going on and then unstash it and send it to a message handler
+        when needed
+
+        This can be used when we have to send message to ourselves.
+        * */
+
     }
 
     /**
